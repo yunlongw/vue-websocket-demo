@@ -128,30 +128,33 @@
                 that.reconnect();
             },
             websocketonmessage(e) {//接收服务器推送的信息
-                //打印收到服务器的内容
                 //数据发送
                 var that = this;
-                window.console.log("message", e);
+                var data = JSON.parse(e.data);
 
-                var msg = JSON.parse(e.data);
-                if (msg.cmd === "heartbeat") {
-                    window.console.log("heartbeat");
-                    return
+                switch (data.cmd) {
+                    case "heartbeat": {
+                        this.reset();
+                        window.console.log("heartbeat");
+                    }
+                        break;
+                    case "send": {
+                        this.minID++;
+                        this.m = !this.m;
+
+                        that.MessageList.push({
+                            id: this.minID,
+                            username: this.m ? "张三" : "李四",
+                            msg: "asdasd",
+                            me: this.m,
+                            time: "六分钟前"
+                        });
+                    }
+                        break;
+                    default:
+                        break;
                 }
-
-
-                this.minID++;
-                this.m = !this.m;
-
-                that.MessageList.push({
-                    id: this.minID,
-                    username: this.m ? "张三" : "李四",
-                    msg: "asdasd",
-                    me: this.m,
-                    time: "六分钟前"
-                });
-                //收到服务器信息，心跳重置
-                this.reset();
+                window.console.log("message", e);
             },
 
             websocketsend(msg) {//向服务器发送信息
@@ -165,7 +168,7 @@
                         message: msg,
                     }
                 });
-                if (this.lockReconnect){
+                if (this.lockReconnect) {
                     this.ws.send(joins);
                 }
             },
