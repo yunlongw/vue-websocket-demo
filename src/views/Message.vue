@@ -8,7 +8,9 @@
                              style="width: 40px; height: 40px; border-radius: 50%; margin-left: -8px; margin-top: 5px;">
                     </div>
                     <div class="col">
-                        <div><b-form-input></b-form-input></div>
+                        <div>
+                            <b-form-input></b-form-input>
+                        </div>
                         <div>
                             <ul style="margin-top: 1rem">
                                 <li>好友 1</li>
@@ -23,9 +25,9 @@
                 </div>
             </div>
             <div class="col border">
-                <Header :currentTab="currentTab"></Header>
+                <Header></Header>
                 <div id="chat-messages" data-spy="scroll" data-target="#list-example" data-offset="0"
-                     class="scrollspy-message">
+                     class="scrolls-message">
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item" v-for="(item, k) in MessageList" :key="k">
                             <ChatItem :me="item.me" :name="item.username" :time="item.time" :msg="item.msg"></ChatItem>
@@ -48,6 +50,9 @@
             return {
                 minID: 1,
                 m: true,
+                ipadd: "127.0.0.1:8001/ws",
+                ws: null,
+                uid: Date.parse(new Date()),
                 MessageList: [
                     {
                         id: 1,
@@ -60,6 +65,11 @@
                 currentTab: 1
             };
         },
+
+        created: function () {
+            this.webSocket();
+        },
+
         components: {
             Header,
             Footer,
@@ -67,34 +77,66 @@
         },
         methods: {
             sendMessage: function (value) {
-                this.minID++;
-                this.m = !this.m;
-
-                this.MessageList.push({
-                    id: this.minID,
-                    username: this.m ? "张三" : "李四",
-                    msg: value,
-                    me: this.m,
-                    time: "六分钟前"
-                });
-
-                // eslint-disable-next-line no-console
-                console.log(this.MessageList)
-
+                this.send(value);
                 var element = document.getElementById('chat-messages');
                 element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
-            }
+            },
+            send: function (value) {
+
+                var joins = JSON.stringify({
+                    Cmd: "send",
+                    Seq: "asdfasdf",
+                    Data: {
+                        uid: this.uid,
+                        email: this.email,
+                        username: this.username,
+                        message: value,
+                    }
+                });
+                this.ws.send(joins);
+
+                window.console.log(value)
+            },
+            webSocket: function () {
+                var self = this;
+                this.ws = new WebSocket('ws://' + this.ipadd);
+                this.ws.addEventListener("open", function (e) {
+                    window.console.log("open", e);
+                });
+
+                this.ws.addEventListener("close", function (e) {
+                    self.eventClose(e);
+                });
+
+                this.ws.addEventListener("error", function (e) {
+                    window.console.log("error", e);
+                });
+
+                this.ws.addEventListener('message', function (e) {
+                    window.console.log("message", e);
+                    this.minID++;
+                    this.m = !this.m;
+
+                    self.MessageList.push({
+                        id: this.minID,
+                        username: this.m ? "张三" : "李四",
+                        msg: "asdsad",
+                        me: this.m,
+                        time: "六分钟前"
+                    });
+                });
+            },
+            eventClose: function (e) {
+                window.console.log("close", e);
+                window.console.log('websocket 断开: ' + e.code + ' ' + e.reason + ' ' + e.wasClean)
+                this.webSocket();
+            },
         }
     }
 </script>
 
 <style>
-    .message-index {
-        padding: 15px;
-        /*margin: 5px;*/
-    }
-
-    .scrollspy-message {
+    .scrolls-message {
         min-height: 10vh;
         height: 80vh;
         width: 100%;
