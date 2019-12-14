@@ -3,9 +3,13 @@
         <div class="row">
             <div class="col-2 border">
                 <div class="row" style="height: 100%">
-                    <div class="col-2" style="height: 100%;background-color: #42b983">
+                    <div class="col-2" style="height: 100%;background-color: #42b983; position: relative;">
                         <img class="img" src="https://avatars2.githubusercontent.com/u/10786476?v=4" alt="yunlongw"
                              style="width: 40px; height: 40px; border-radius: 50%; margin-left: -8px; margin-top: 5px;">
+                        <div style="position: absolute; bottom: 0;">
+                            <b-button class="btn btn-danger btn-sm" style="margin-bottom: 0" @click="exit">exit
+                            </b-button>
+                        </div>
                     </div>
                     <div class="col">
                         <div>
@@ -57,6 +61,7 @@
                 timeoutObj: null,//心跳心跳倒计时
                 serverTimeoutObj: null,//心跳倒计时
                 timeoutnum: null,//断开 重连倒计时
+                selectUID: null,
 
                 uid: Date.parse(new Date()),
                 MessageList: [
@@ -95,31 +100,42 @@
                 //建立连接
                 this.ws = new WebSocket(ws_url);
                 //连接成功
-                this.ws.onopen = this.websocketonopen;
+                this.ws.onopen = this.OnOpen;
                 //连接错误
-                this.ws.onerror = this.websocketonerror;
+                this.ws.onerror = this.OnError;
                 //接收信息
-                this.ws.onmessage = this.websocketonmessage;
+                this.ws.onmessage = this.OnMessage;
                 //连接关闭
-                this.ws.onclose = this.websocketclose;
+                this.ws.onclose = this.onclose;
             },
 
-            websocketonopen() {//连接成功事件
+            OnOpen() {//连接成功事件
                 window.console.log("链接成功");
                 var that = this;
                 that.lockReconnect = true;
+                //发送用户数据
+                var userToken = localStorage.getItem("userToken");
+                var data = JSON.stringify({
+                    Cmd: "login",
+                    Seq: "",
+                    Data: {
+                        userId: userToken,
+                        ChatId: 1,
+                    },
+                });
+                that.ws.send(data);
                 //开启心跳
                 this.start();
             },
 
-            websocketonerror() {//连接失败事件
+            OnError() {//连接失败事件
                 //错误
                 window.console.log("WebSocket连接发生错误");
                 //错误提示
                 //重连
                 this.reconnect();
             },
-            websocketclose(e) {//连接关闭事件
+            onclose(e) {//连接关闭事件
                 var that = this;
                 that.lockReconnect = false;
                 //关闭
@@ -127,7 +143,7 @@
                 //重连
                 that.reconnect();
             },
-            websocketonmessage(e) {//接收服务器推送的信息
+            OnMessage(e) {//接收服务器推送的信息
                 //数据发送
                 var that = this;
                 var data = JSON.parse(e.data);
@@ -153,6 +169,31 @@
                         });
                     }
                         break;
+
+                    case "login": {
+                        window.console.log("socket 登录成功");
+                        var message = JSON.stringify({
+                            Cmd: "chat",
+                            Seq: "",
+                            Data: {
+                                ChatId: 1,
+                            },
+                        });
+                        that.ws.send(message);
+
+                    }
+                        break;
+                    case "chat" : {
+                        window.console.log("join 群组成功");
+                    }
+
+                        break;
+                    case "groupList" : {
+                        window.console.log("群组列表");
+                        window.console.log(data.data);
+                    }
+
+                        break;
                     default:
                         break;
                 }
@@ -162,13 +203,9 @@
             websocketsend(msg) {//向服务器发送信息
                 var that = this;
                 window.console.log(msg);
-                var joins = JSON.stringify({
-                    Cmd: "send",
-                    Seq: "asdfasdf",
-                    Data: {},
-                });
                 if (this.lockReconnect) {
-                    that.ws.send(joins);
+                    var data = this.getRequest("send", "", msg);
+                    that.ws.send(data);
                 }
             },
 
@@ -177,6 +214,15 @@
                     Cmd: "heartbeat",
                     Seq: "asdfasdf",
                     Data: {}
+                });
+            },
+
+
+            getRequest(cmd, seq, data) {
+                return JSON.stringify({
+                    Cmd: cmd,
+                    Seq: seq,
+                    Data: data
                 });
             },
 
@@ -229,6 +275,19 @@
 
                 }, that.timeout)
             },
+
+            exit() {
+                this.ws.close();
+                localStorage.clear();
+                this.$router.push('/login')
+            },
+
+            groupList() {
+                var data = this.getRequest("grouplist", "", "");
+                this.ws.send(data);
+            },
+
+
         }
     }
 </script>
