@@ -53,7 +53,7 @@
                 ipadd: "127.0.0.1:8001/ws",
                 ws: null,
                 lockReconnect: false,//是否真正建立连接
-                timeout: 2 * 1000,//30秒一次心跳
+                timeout: 30 * 1000,//30秒一次心跳
                 timeoutObj: null,//心跳心跳倒计时
                 serverTimeoutObj: null,//心跳倒计时
                 timeoutnum: null,//断开 重连倒计时
@@ -85,8 +85,8 @@
             sendMessage: function (value) {
                 var that = this;
                 that.websocketsend(value);
-                var element = document.getElementById('chat-messages');
-                element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+                // var element = document.getElementById('chat-messages');
+                // element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
             },
 
             initWebSocket() {//建立连接
@@ -139,9 +139,11 @@
                     }
                         break;
                     case "send": {
+                        window.console.log("send");
+                    }
+                        break;
+                    case "msg": {
                         this.minID++;
-                        this.m = !this.m;
-
                         that.MessageList.push({
                             id: this.minID,
                             username: this.m ? "张三" : "李四",
@@ -158,18 +160,15 @@
             },
 
             websocketsend(msg) {//向服务器发送信息
+                var that = this;
+                window.console.log(msg);
                 var joins = JSON.stringify({
                     Cmd: "send",
                     Seq: "asdfasdf",
-                    Data: {
-                        uid: this.uid,
-                        email: this.email,
-                        username: this.username,
-                        message: msg,
-                    }
+                    Data: {},
                 });
                 if (this.lockReconnect) {
-                    this.ws.send(joins);
+                    that.ws.send(joins);
                 }
             },
 
@@ -179,6 +178,10 @@
                     Seq: "asdfasdf",
                     Data: {}
                 });
+            },
+
+            sendHeartJson() {
+                this.ws.send(this.heartJson());
             },
 
             reset() {//重置心跳
@@ -198,7 +201,7 @@
                 }
 
                 //没连接上会一直重连，设置延迟避免请求过多
-                // that.timeoutnum && clearTimeout(that.timeoutnum);
+                that.timeoutnum && clearTimeout(that.timeoutnum);
 
                 that.timeoutnum = setTimeout(function () {
                     //新连接
@@ -211,11 +214,13 @@
                 var that = this;
                 that.timeoutObj && clearTimeout(that.timeoutObj);
                 that.serverTimeoutObj && clearTimeout(that.serverTimeoutObj);
+
                 that.timeoutObj = setTimeout(function () {
                     window.console.log("heartCheck");
                     //这里发送一个心跳，后端收到后，返回一个心跳消息，
                     if (that.ws.readyState === 1) {//如果连接正常
-                        that.ws.send(that.heartJson());
+                        that.sendHeartJson();
+                        // that.ws.send(that.heartJson());
                     } else {//否则重连
                         window.console.log("readyState 状态异常");
                         that.reconnect();
