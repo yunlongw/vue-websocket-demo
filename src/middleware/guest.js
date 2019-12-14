@@ -1,9 +1,11 @@
-export default function guest ({ next, store }){
-    if(store.getters.auth.loggedIn){
+export default function guest({next}) {
+    var userToken = localStorage.getItem("userToken");
+    window.console.log(userToken);
+    if (userToken) {
         return next({
-           name: 'dashboard'
+            name: 'message'
         })
     }
 
     return next()
-   }
+}
