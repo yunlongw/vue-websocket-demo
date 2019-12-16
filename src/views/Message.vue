@@ -17,19 +17,16 @@
                         </div>
                         <div>
                             <ul style="margin-top: 1rem">
-                                <li>好友 1</li>
-                                <li>好友 1</li>
-                                <li>好友 1</li>
-                                <li>好友 1</li>
-                                <li>好友 1</li>
-                                <li>好友 1</li>
+                                <li v-for="item in grouplist" :key="item.id" @click="selectChat(item.id, item.name)">
+                                    <span>{{item.name}}</span>
+                                </li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col border">
-                <Header></Header>
+                <Header :title="title"></Header>
                 <div id="chat-messages" data-spy="scroll" data-target="#list-example" data-offset="0"
                      class="scrolls-message">
                     <ul class="list-group list-group-flush">
@@ -53,6 +50,9 @@
         data() {
             return {
                 minID: 1,
+                grouplist: [],
+                title: "默认",
+                chatId: null,
                 m: true,
                 ipadd: "127.0.0.1:8001/ws",
                 ws: null,
@@ -114,19 +114,22 @@
                 var that = this;
                 that.lockReconnect = true;
                 //发送用户数据
-                var userToken = localStorage.getItem("userToken");
-                var data = JSON.stringify({
-                    Cmd: "login",
-                    Seq: "",
-                    Data: {
-                        userId: userToken,
-                        ChatId: 1,
-                    },
-                });
-                that.ws.send(data);
+                this.Login();
+                // this.groupList();
                 //开启心跳
                 this.start();
             },
+
+            Login() {
+                var userToken = localStorage.getItem("userToken");
+                var data = {
+                    UserId: userToken,
+                    ChatId: 1
+                };
+                var requestData = this.getRequest("login", "", data);
+                this.ws.send(requestData)
+            },
+
 
             OnError() {//连接失败事件
                 //错误
@@ -172,14 +175,11 @@
 
                     case "login": {
                         window.console.log("socket 登录成功");
-                        var message = JSON.stringify({
-                            Cmd: "chat",
-                            Seq: "",
-                            Data: {
-                                ChatId: 1,
-                            },
-                        });
-                        that.ws.send(message);
+                        if (data.code === 1001) {
+                            // 超时断开链接，要求重新登录
+                            this.$router.push('/login')
+                        }
+                        this.groupList();
 
                     }
                         break;
@@ -188,9 +188,10 @@
                     }
 
                         break;
-                    case "groupList" : {
+                    case "grouplist" : {
                         window.console.log("群组列表");
-                        window.console.log(data.data);
+                        this.grouplist = data.response.data;
+                        window.console.log(data.response.data);
                     }
 
                         break;
@@ -283,10 +284,16 @@
             },
 
             groupList() {
-                var data = this.getRequest("grouplist", "", "");
+                var data = this.getRequest("grouplist", "", {});
                 this.ws.send(data);
             },
 
+            selectChat(id, name) {
+                window.console.log("选择聊天群组");
+                window.console.log(id);
+                this.chatId = id;
+                this.title = name;
+            },
 
         }
     }

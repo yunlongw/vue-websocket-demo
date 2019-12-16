@@ -1,5 +1,15 @@
 <template>
-  <div class="index">
-    <h1>Docker 交流</h1>
-  </div>
+    <div class="index">
+        <h1>{{title}}</h1>
+    </div>
 </template>
+
+<script>
+    export default {
+        props: ['title'],
+        data() {
+            return {}
+        },
+        methods: {}
+    }
+</script>
