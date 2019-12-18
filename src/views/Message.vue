@@ -63,7 +63,7 @@
                 timeoutnum: null,//断开 重连倒计时
                 selectUID: null,
 
-                uid: Date.parse(new Date()),
+                uid: null,
                 MessageList: [
                     {
                         id: 1,
@@ -89,7 +89,20 @@
         methods: {
             sendMessage: function (value) {
                 var that = this;
-                that.websocketsend(value);
+                window.console.log(value);
+                if (this.chatId == null) {
+                    alert("请选择聊天对象");
+                    return
+                }
+                if (this.lockReconnect) {
+                    var v = {
+                        "to": this.chatId,
+                        "text": value,
+                    };
+                    var data = this.getRequest("send", "", v);
+                    that.ws.send(data);
+                }
+
                 // var element = document.getElementById('chat-messages');
                 // element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
             },
@@ -150,6 +163,9 @@
                 //数据发送
                 var that = this;
                 var data = JSON.parse(e.data);
+                window.console.log("message - e", e);
+                window.console.log("uid", this.uid);
+
 
                 switch (data.cmd) {
                     case "heartbeat": {
@@ -163,10 +179,17 @@
                         break;
                     case "msg": {
                         this.minID++;
+
+                        if (data.response.data.from.id === this.uid) {
+                            this.m = true
+                        } else {
+                            this.m = false
+                        }
+
                         that.MessageList.push({
                             id: this.minID,
-                            username: this.m ? "张三" : "李四",
-                            msg: "asdasd",
+                            username: data.response.data.from.name,
+                            msg: data.response.data.text,
                             me: this.m,
                             time: "六分钟前"
                         });
@@ -175,10 +198,19 @@
 
                     case "login": {
                         window.console.log("socket 登录成功");
-                        if (data.code === 1001) {
+                        if (data.response.code === 1001) {
                             // 超时断开链接，要求重新登录
                             this.$router.push('/login')
+                            return
                         }
+                        if (data.response.code === 1010) {
+                            // 超时断开链接，要求重新登录
+                            this.$router.push('/login')
+                            return
+                        }
+
+                        this.uid = data.response.data
+
                         this.groupList();
 
                     }
@@ -197,16 +229,6 @@
                         break;
                     default:
                         break;
-                }
-                window.console.log("message", e);
-            },
-
-            websocketsend(msg) {//向服务器发送信息
-                var that = this;
-                window.console.log(msg);
-                if (this.lockReconnect) {
-                    var data = this.getRequest("send", "", msg);
-                    that.ws.send(data);
                 }
             },
 
